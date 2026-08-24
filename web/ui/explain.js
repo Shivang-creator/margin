@@ -8,6 +8,15 @@ import { sentenceListHTML, runLineHTML, mountStrikes } from "./sentence.js";
 
 const PROMPT = "Close your notes. Type what you remember — every sentence gets checked against the page.";
 
+// isDuplicateRun (J-02, exported for a DOM-free regression test): true when `studentText`
+// against `notes` is exactly the immediately-prior Check submission — the case a rapid
+// double/triple click on an unchanged textarea produces. Only compares to the *last* run
+// (not full history) on purpose: editing the text and clicking Check again, even back to an
+// earlier value, is a new, intentional submission and must still tally.
+export function isDuplicateRun(prev, notes, studentText) {
+  return Boolean(prev) && prev.notesAtRun === notes && prev.studentText === studentText;
+}
+
 export function createExplainSurface({
   panelEl,
   getState,
@@ -17,7 +26,7 @@ export function createExplainSurface({
   notesDisabledReason,
   onSentenceActivated,
 }) {
-  let lastResult = null; // { verdicts, counts, missedLines, notesAtRun }
+  let lastResult = null; // { verdicts, counts, missedLines, notesAtRun, studentText }
 
   function render() {
     const disabledReason = notesDisabledReason();
@@ -70,11 +79,21 @@ export function createExplainSurface({
     if (!studentText.trim() || notesDisabledReason()) return;
 
     const { notes } = getState();
+
+    // J-02: rapid/double-clicking Check on the same, unchanged text used to append a fresh
+    // sessions[] entry (and re-add to the tally) per click — the session-wide "N sentences
+    // checked" counter silently climbed with no user-visible sign anything happened twice.
+    // A re-submit of an unchanged run is a no-op: re-show the same result, do not re-tally.
+    if (isDuplicateRun(lastResult, notes, studentText)) {
+      renderResult();
+      return;
+    }
+
     const result = runExplainBack({ notes, studentText, tally: getState().tally });
     setTally(result.tally);
     recordSession({ surface: "explain-back", counts: result.counts, at: new Date().toISOString() });
 
-    lastResult = { verdicts: result.verdicts, counts: result.counts, missedLines: result.missedLines, notesAtRun: notes };
+    lastResult = { verdicts: result.verdicts, counts: result.counts, missedLines: result.missedLines, notesAtRun: notes, studentText };
     renderResult();
     notesPane.applyVerdicts(result.verdicts, { isStudent: true });
   }
