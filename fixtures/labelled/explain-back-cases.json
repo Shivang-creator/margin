@@ -1,0 +1,45 @@
+{
+  "preRegistered": "2026-08-25",
+  "margin": { "catchAtLeast": 12, "falseStrikeAtMost": 5 },
+  "threshold": 0.5,
+  "notesFixture": "fixtures/sample-notes.md",
+  "note": "30 hand-labelled explain-back sentences over fixtures/sample-notes.md (PLAN §4.5, T-11). 15 GROUNDED (5 near-verbatim, 5 light paraphrase, 5 heavy paraphrase) and 15 INVENTED (5 plausible-true-but-absent, 5 wrong-number, 4 off-topic, 1 semantic-swap). Margin above is pre-registered before this set was run against core/ledger.js and is never adjusted to fit the result; OVERLAP_THRESHOLD in core/constants.js is untouched by this fixture. Two rows are pre-registered as expected false results because the Ledger only checks lexical overlap and exact numbers, never meaning: 'doubles-vs-increases' (DECISIONS 2026-08-25 01:50) is a wrong-number-shaped miss with no number in it, and one heavy-paraphrase row is a true statement reworded far enough from any single note line to fall under OVERLAP_THRESHOLD. Both misses are recorded here, not tuned away.",
+  "cases": [
+    { "text": "Mature mammalian red blood cells have no mitochondria at all.", "label": "GROUNDED", "kind": "near-verbatim", "expectedReason": "GROUNDED", "why": "Copied verbatim from the notes." },
+    { "text": "Glucose is split into two pyruvate molecules.", "label": "GROUNDED", "kind": "near-verbatim", "expectedReason": "GROUNDED", "why": "Copied verbatim from the notes." },
+    { "text": "Oxygen is the final electron acceptor and is reduced to water.", "label": "GROUNDED", "kind": "near-verbatim", "expectedReason": "GROUNDED", "why": "Copied verbatim from the notes." },
+    { "text": "The chemiosmotic hypothesis was proposed in 1961.", "label": "GROUNDED", "kind": "near-verbatim", "expectedReason": "GROUNDED", "why": "Copied verbatim from the notes, number intact." },
+    { "text": "Each turn of the cycle produces 3 NADH, 1 FADH2 and 1 GTP.", "label": "GROUNDED", "kind": "near-verbatim", "expectedReason": "GROUNDED", "why": "Near-verbatim, all three numbers intact." },
+
+    { "text": "The mitochondrion word was coined by Carl Benda back in 1898.", "label": "GROUNDED", "kind": "light-paraphrase", "expectedReason": "GROUNDED", "why": "Word order and a filler word ('back') changed, same fact and number." },
+    { "text": "Cristae increase the surface area of the inner membrane.", "label": "GROUNDED", "kind": "light-paraphrase", "expectedReason": "GROUNDED", "why": "Restates the cristae/surface-area line without changing any word that carries meaning." },
+    { "text": "Protons are pumped into the intermembrane space as electrons move down the chain.", "label": "GROUNDED", "kind": "light-paraphrase", "expectedReason": "GROUNDED", "why": "Passive-voice rewrite of the electron-transport-chain sentence, same claim." },
+    { "text": "The human mitochondrial genome contains 16,569 base pairs.", "label": "GROUNDED", "kind": "light-paraphrase", "expectedReason": "GROUNDED", "why": "Synonym swap ('contains' for 'is'), number intact." },
+    { "text": "Pyruvate is converted to acetyl-CoA when it enters the matrix, releasing CO2.", "label": "GROUNDED", "kind": "light-paraphrase", "expectedReason": "GROUNDED", "why": "Clause order swapped, same fact." },
+
+    { "text": "Since red blood cells in mammals lack mitochondria entirely, they rely solely on glycolysis for energy.", "label": "GROUNDED", "kind": "heavy-paraphrase", "expectedReason": "GROUNDED", "why": "True statement combining two adjacent note sentences (no mitochondria; glycolysis alone), reworded far enough that it may miss the overlap bar against any single note line — a known stress case for the align step, not tuned around.", "knownMiss": true },
+    { "text": "ATP synthase makes one ATP molecule for every three protons passing through it.", "label": "GROUNDED", "kind": "heavy-paraphrase", "expectedReason": "GROUNDED", "why": "Fully reworded restatement of the synthase 1-ATP-per-3-protons line, numbers intact." },
+    { "text": "FADH2 yields less ATP than NADH because it bypasses complex I, resulting in fewer protons pumped.", "label": "GROUNDED", "kind": "heavy-paraphrase", "expectedReason": "GROUNDED", "why": "Reworded restatement of the FADH2/complex-I sentence." },
+    { "text": "Because pyruvate can't get into the mitochondrion during fermentation, the ATP yield stays at the glycolysis figure.", "label": "GROUNDED", "kind": "heavy-paraphrase", "expectedReason": "GROUNDED", "why": "Reworded restatement of the fermentation sentence." },
+    { "text": "The outer membrane's porins allow small molecules to pass through it.", "label": "GROUNDED", "kind": "heavy-paraphrase", "expectedReason": "GROUNDED", "why": "Reworded restatement of the outer-membrane/porins line." },
+
+    { "text": "The mitochondrial genome is inherited exclusively from the mother.", "label": "INVENTED", "kind": "plausible-absent", "expectedReason": "LOW_OVERLAP", "why": "True in general biology, never stated in these notes." },
+    { "text": "Mitochondria are thought to have originated from ancient bacteria through endosymbiosis.", "label": "INVENTED", "kind": "plausible-absent", "expectedReason": "LOW_OVERLAP", "why": "Plausible textbook fact absent from this notes file." },
+    { "text": "Cyanide poisoning blocks the electron transport chain at complex IV.", "label": "INVENTED", "kind": "plausible-absent", "expectedReason": "LOW_OVERLAP", "why": "True but never mentioned; notes name complex I only." },
+    { "text": "Brown fat contains many mitochondria to generate heat instead of ATP.", "label": "INVENTED", "kind": "plausible-absent", "expectedReason": "LOW_OVERLAP", "why": "True but off the notes entirely." },
+    { "text": "Mitochondrial dysfunction is linked to Parkinson's disease and other neurodegenerative disorders.", "label": "INVENTED", "kind": "plausible-absent", "expectedReason": "LOW_OVERLAP", "why": "True but off the notes entirely." },
+
+    { "text": "The word mitochondrion was coined by Carl Benda in 1902.", "label": "INVENTED", "kind": "wrong-number", "expectedReason": "NUMBER_NOT_IN_QUOTE", "why": "Real fact, year changed from 1898 to 1902." },
+    { "text": "A typical mitochondrion has a cross-section of about 5 to 8 square micrometres.", "label": "INVENTED", "kind": "wrong-number", "expectedReason": "NUMBER_NOT_IN_QUOTE", "why": "Real fact, range changed from 0.75-3 to 5-8." },
+    { "text": "The human mitochondrial genome is 15,000 base pairs long.", "label": "INVENTED", "kind": "wrong-number", "expectedReason": "NUMBER_NOT_IN_QUOTE", "why": "Real fact, base-pair count changed from 16,569 to 15,000." },
+    { "text": "The chemiosmotic hypothesis was proposed in 1965.", "label": "INVENTED", "kind": "wrong-number", "expectedReason": "NUMBER_NOT_IN_QUOTE", "why": "Real fact, year changed from 1961 to 1965." },
+    { "text": "Peter Mitchell was awarded the Nobel Prize in Chemistry in 1985 for it.", "label": "INVENTED", "kind": "wrong-number", "expectedReason": "NUMBER_NOT_IN_QUOTE", "why": "Real fact, year changed from 1978 to 1985." },
+
+    { "text": "Photosynthesis converts light energy into chemical energy stored in glucose.", "label": "INVENTED", "kind": "off-topic", "expectedReason": "LOW_OVERLAP", "why": "Different biology topic, not covered by these notes." },
+    { "text": "DNA replication occurs during the S phase of the cell cycle.", "label": "INVENTED", "kind": "off-topic", "expectedReason": "LOW_OVERLAP", "why": "Different biology topic, not covered by these notes." },
+    { "text": "The pancreas secretes insulin to regulate blood sugar levels.", "label": "INVENTED", "kind": "off-topic", "expectedReason": "LOW_OVERLAP", "why": "Different biology topic, not covered by these notes." },
+    { "text": "Osmosis is the movement of water across a semipermeable membrane.", "label": "INVENTED", "kind": "off-topic", "expectedReason": "LOW_OVERLAP", "why": "Shares the word 'membrane' with several note lines but is a different topic entirely." },
+
+    { "text": "Cristae double the surface area of the inner membrane.", "label": "INVENTED", "kind": "semantic-swap", "expectedReason": "SEMANTIC_MISMATCH", "why": "The notes say cristae increase surface area, never that they double it — a specific, wrong quantitative claim with no digit in it. The Ledger has no reason code for a meaning-changing word swap and is pre-registered here as an expected false pass (DECISIONS 2026-08-25 01:50): this is the honest limit of a lexical-overlap check, not a bug to fix by tuning the threshold.", "knownMiss": true }
+  ]
+}
