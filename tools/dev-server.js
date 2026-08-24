@@ -1,7 +1,10 @@
 // Local dev server: node:http only, no dependencies.
 // Serves the static site (never .crew/) and mounts api/*.js default exports at /api/<name>.
 // Reads .env.local into process.env with a simple KEY=value parser.
-// MOCK_GENERATE=1 support is added in T-09 (api/generate.js).
+// With MOCK_GENERATE=1, POST /api/generate never reaches api/generate.js or the network — it
+// replays fixtures/generations/<action>-1.json with provider forced to "fixture". Production
+// (Vercel) has no MOCK_GENERATE and no code path that could serve a fixture (T-09 accept check:
+// `grep -rn 'fixture' api/ | wc -l` -> 0).
 
 import http from "node:http";
 import fs from "node:fs";
@@ -83,8 +86,36 @@ function augmentResponse(res) {
   return res;
 }
 
+function serveMockGenerate(req, res) {
+  augmentResponse(res);
+  const action = (req.body && req.body.action) || "ask";
+  const fixturePath = path.join(ROOT, "fixtures", "generations", `${action}-1.json`);
+  if (!fs.existsSync(fixturePath)) {
+    res.status(502).json({ ok: false, code: "bad-model-output", detail: `no fixture recorded for action "${action}"` });
+    return;
+  }
+  let recorded;
+  try {
+    recorded = JSON.parse(fs.readFileSync(fixturePath, "utf8"));
+  } catch {
+    res.status(502).json({ ok: false, code: "bad-model-output", detail: `fixture ${fixturePath} is not valid JSON` });
+    return;
+  }
+  res.status(200).json({ ...recorded, provider: "fixture" });
+}
+
 async function handleApi(req, res, urlPath) {
   const name = urlPath.replace(/^\/api\//, "").replace(/\/$/, "");
+
+  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
+    req.body = await readBody(req);
+  }
+
+  if (name === "generate" && process.env.MOCK_GENERATE === "1") {
+    serveMockGenerate(req, res);
+    return;
+  }
+
   const filePath = path.join(ROOT, "api", `${name}.js`);
   if (!fs.existsSync(filePath)) {
     res.statusCode = 404;
@@ -92,9 +123,6 @@ async function handleApi(req, res, urlPath) {
     return;
   }
   augmentResponse(res);
-  if (req.method === "POST" || req.method === "PUT" || req.method === "PATCH") {
-    req.body = await readBody(req);
-  }
   const mod = await import(pathToFileURL(filePath).href + `?t=${Date.now()}`);
   await mod.default(req, res);
 }

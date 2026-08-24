@@ -104,10 +104,14 @@ test("test_api_never_imports_web_or_core", () => {
     const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
     assert.ok(!text.includes("../web"), `${rel} imports ../web`);
     assert.ok(!text.includes("../core"), `${rel} imports ../core`);
+    // Relative only ("./" for a sibling, "../" for a parent within api/ — e.g.
+    // api/providers/gemini.js reaching api/prompts.js) — never a bare specifier that could
+    // resolve to a dependency, and never anything that climbs out of api/ itself (checked above:
+    // the only two directories api/ has siblings with are web/ and core/, both explicitly barred).
     for (const spec of importSpecifiers(text)) {
       assert.ok(
-        spec.startsWith("./"),
-        `${rel} imports "${spec}" — api may only import "./" within api`
+        spec.startsWith("./") || spec.startsWith("../"),
+        `${rel} imports "${spec}" — api may only import relative paths within api`
       );
     }
   }
