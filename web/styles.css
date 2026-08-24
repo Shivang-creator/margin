@@ -1,0 +1,15 @@
+body {
+  font-family: system-ui, sans-serif;
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  color: #1a1a1a;
+}
+
+footer {
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  color: #666;
+  display: flex;
+  gap: 1rem;
+}

@@ -1,0 +1,6 @@
+.crew
+tests
+tools
+.env.local
+node_modules
+tmp

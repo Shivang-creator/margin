@@ -1,0 +1,17 @@
+{
+  "name": "margin",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:count": "node tools/test-count.js",
+    "dev": "node tools/dev-server.js",
+    "killswitch": "node tools/killswitch.js",
+    "calibrate": "node --test tests/calibration.test.js"
+  },
+  "dependencies": {}
+}
