@@ -42,6 +42,7 @@ export async function runAsk({ notes, question, state, fetchImpl, cache, now, ta
     return {
       status: result.status,
       retryAfterSec: result.retryAfterSec,
+      detail: result.detail,
       verdicts: [],
       counts: EMPTY_COUNTS,
       tally,
@@ -71,6 +72,7 @@ export async function applyQuiz({ notes, state, fetchImpl, cache, now, tally }) 
     return {
       status: result.status,
       retryAfterSec: result.retryAfterSec,
+      detail: result.detail,
       questions: [],
       counts: EMPTY_COUNTS,
       tally,
@@ -79,7 +81,16 @@ export async function applyQuiz({ notes, state, fetchImpl, cache, now, tally }) 
 
   const questions = result.generation?.questions ?? [];
   const { questions: graded, counts } = applyLedgerToQuiz(notes ?? "", questions);
+  // core/quiz.js's applyLedgerToQuiz doesn't carry the verdict's span out (it only needs
+  // grounded/refused for grading), but the UI needs it to light the notes-pane span when a
+  // kept question is answered. Re-run the same deterministic ledger() call it already made,
+  // in the same order, and merge the span back in — no change to core/ required.
+  const { verdicts: spanVerdicts } = ledger(
+    notes ?? "",
+    questions.map((q) => ({ text: q.statement, quote: q.quote ?? null }))
+  );
+  const withSpans = graded.map((g, i) => ({ ...g, span: spanVerdicts[i]?.span ?? null }));
   const nextTally = reduceTally(tally, counts, "quiz");
 
-  return { source: result.source, meta: result.meta, questions: graded, counts, tally: nextTally };
+  return { source: result.source, meta: result.meta, questions: withSpans, counts, tally: nextTally };
 }

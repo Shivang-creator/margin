@@ -1,7 +1,6 @@
 // Boot: load state, wire the shell (header, notes pane, tally, tabs, mobile segments),
-// Explain-back (fully working, zero network), and footer health. Ask/Quiz are placeholders
-// until T-13 wires the model — they render the DESIGN "model-off" state, which is honestly
-// true right now: no model call exists on this page yet.
+// Explain-back (zero network), Ask + Quiz (model client wiring via web/model.js /
+// web/pipeline.js), and footer health.
 
 import {
   loadState,
@@ -13,16 +12,29 @@ import {
   setTally as applyTally,
   recordSession as applyRecordSession,
 } from "./state.js";
+import { createCache } from "./cache.js";
 import { createNotesPane } from "./ui/notes.js";
 import { createTallyStrip } from "./ui/tally.js";
 import { createExplainSurface } from "./ui/explain.js";
-import { modelOffBannerHTML, stateCardHTML } from "./ui/status.js";
+import { createAskSurface } from "./ui/ask.js";
+import { createQuizSurface } from "./ui/quiz.js";
+import { modelOffBannerHTML } from "./ui/status.js";
 
 let state = loadState();
 function setState(next) {
   state = next;
   saveState(state);
 }
+
+const cache = createCache(typeof localStorage !== "undefined" ? localStorage : undefined);
+const fetchImpl = typeof fetch === "function" ? fetch.bind(globalThis) : undefined;
+const now = () => new Date();
+
+// Populated by bootFooter() from /api/health; read by Ask/Quiz for the loading-state
+// model name and the rate-limit-day "tried these models" list. Both stay `null` until the
+// health call resolves — surfaces fall back to generic copy until then.
+let healthModel = null;
+let healthModels = null;
 
 const els = {
   modelSwitch: document.getElementById("model-switch"),
@@ -49,11 +61,15 @@ const els = {
   footerLine2: document.getElementById("footer-line2"),
 };
 
-/* ---------- model toggle (visual + banner; nothing to gate yet) ---------- */
+/* ---------- model toggle (real: persisted, gates Ask/Quiz via web/model.js) ---------- */
 function renderModelSwitch() {
   els.modelSwitch.setAttribute("aria-checked", state.modelOff ? "false" : "true");
   els.modelSwitchWord.textContent = state.modelOff ? "off" : "on";
   els.modelOffBanner.innerHTML = state.modelOff ? modelOffBannerHTML() : "";
+}
+function turnModelOn() {
+  setState(applyModelOff(state, false));
+  renderModelSwitch();
 }
 els.modelSwitch.addEventListener("click", () => {
   setState(applyModelOff(state, !state.modelOff));
@@ -66,10 +82,14 @@ const notesPane = createNotesPane({
   bodyEl: els.notesBody,
   getState: () => state,
   setNotes: (notes, source) => setState(applyNotes(state, notes, source)),
-  onNotesChanged: () => explainSurface.render(),
+  onNotesChanged: () => {
+    explainSurface.render();
+    askSurface.render();
+    quizSurface.render();
+  },
 });
 
-/* ---------- tally strip + reveal toggle ---------- */
+/* ---------- tally strip + reveal toggle (real: applies to every surface's rows) ---------- */
 const tallyStrip = createTallyStrip({
   el: els.tally,
   getState: () => state,
@@ -77,6 +97,8 @@ const tallyStrip = createTallyStrip({
     setState(applyReveal(state, reveal));
     tallyStrip.render();
     explainSurface.setReveal();
+    askSurface.setReveal();
+    quizSurface.setReveal();
   },
 });
 
@@ -94,52 +116,46 @@ const explainSurface = createExplainSurface({
   onSentenceActivated: focusNotesFromSentence,
 });
 
-/* ---------- Ask / Quiz placeholders (DESIGN §5.4/§5.5 model-off state; T-13 wires the model) ---------- */
-function turnModelOn() {
-  setState(applyModelOff(state, false));
-  renderModelSwitch();
-}
+/* ---------- Ask (model client wiring: web/model.js -> /api/generate, every honest state) ---------- */
+const askSurface = createAskSurface({
+  panelEl: els.panelAsk,
+  getState: () => state,
+  setTally: (tally) => {
+    setState(applyTally(state, tally));
+    tallyStrip.render();
+  },
+  recordSession: (session) => setState(applyRecordSession(state, session)),
+  notesPane,
+  notesDisabledReason: () => notesPane.disabledReason(),
+  getHealthModel: () => healthModel,
+  fetchImpl,
+  cache,
+  now,
+  onSentenceActivated: focusNotesFromSentence,
+  onTurnModelOn: turnModelOn,
+});
+// getHealthModels is read lazily by ask.js's own closure (see web/ui/ask.js) — wire it here
+// once so a health response that arrives after boot still reaches the rate-limit-day card.
+askSurface.setHealthModels?.(healthModels);
 
-function renderAskPlaceholder() {
-  els.panelAsk.innerHTML = `
-    <div class="surface">
-      <p class="prompt-line">Ask anything about the page. Every sentence in the answer has to cite a line, and code checks it.</p>
-      <input type="text" disabled placeholder="Ask a question…" maxlength="500" />
-      <div class="surface-actions">
-        <button type="button" class="btn btn-primary" disabled>Ask</button>
-        <span class="disabled-reason">Model isn't wired up yet — Explain-back works fully now.</span>
-      </div>
-      <div class="result-region">
-        ${stateCardHTML({
-          variant: "warn",
-          title: "Model off — nothing cached for this question.",
-          body: "Turn the model on to ask this, or ask a question you've asked before. Explain-back doesn't need the model.",
-          actionHTML: '<button type="button" class="btn" id="ask-turn-on">Turn model on</button>',
-        })}
-      </div>
-    </div>`;
-  els.panelAsk.querySelector("#ask-turn-on")?.addEventListener("click", turnModelOn);
-}
-
-function renderQuizPlaceholder() {
-  els.panelQuiz.innerHTML = `
-    <div class="surface">
-      <p class="prompt-line">Five questions from the page. Any question your notes can't answer is refused, not shown.</p>
-      <div class="surface-actions">
-        <button type="button" class="btn btn-primary" disabled>Make quiz</button>
-        <span class="disabled-reason">Model isn't wired up yet — Explain-back works fully now.</span>
-      </div>
-      <div class="result-region">
-        ${stateCardHTML({
-          variant: "warn",
-          title: "Model off — nothing cached for a quiz yet.",
-          body: "Turn the model on to make a quiz, or open one you've made before. Explain-back doesn't need the model.",
-          actionHTML: '<button type="button" class="btn" id="quiz-turn-on">Turn model on</button>',
-        })}
-      </div>
-    </div>`;
-  els.panelQuiz.querySelector("#quiz-turn-on")?.addEventListener("click", turnModelOn);
-}
+/* ---------- Quiz ---------- */
+const quizSurface = createQuizSurface({
+  panelEl: els.panelQuiz,
+  getState: () => state,
+  setTally: (tally) => {
+    setState(applyTally(state, tally));
+    tallyStrip.render();
+  },
+  recordSession: (session) => setState(applyRecordSession(state, session)),
+  notesPane,
+  notesDisabledReason: () => notesPane.disabledReason(),
+  getHealthModel: () => healthModel,
+  getHealthModels: () => healthModels,
+  fetchImpl,
+  cache,
+  now,
+  onTurnModelOn: turnModelOn,
+});
 
 /* ---------- tabs (desktop) + segmented control (mobile, DESIGN §7) ---------- */
 const SEGMENT_LABEL = { explain: "Explain", ask: "Ask", quiz: "Quiz" };
@@ -275,6 +291,9 @@ async function bootFooter() {
     } else {
       els.footerModel.textContent = `Model ${data.model ?? "unknown"}`;
     }
+    healthModel = data.model ?? null;
+    healthModels = [data.model, ...(Array.isArray(data.fallbackModels) ? data.fallbackModels : [])].filter(Boolean);
+    askSurface.setHealthModels?.(healthModels);
   } catch {
     els.footerModel.textContent = "Model: health unreachable";
     els.footerModel.classList.add("warn");
@@ -296,8 +315,8 @@ renderModelSwitch();
 notesPane.render();
 tallyStrip.render();
 explainSurface.render();
-renderAskPlaceholder();
-renderQuizPlaceholder();
+askSurface.render();
+quizSurface.render();
 renderFooterLegend();
 applyVisibility();
 bootFooter();

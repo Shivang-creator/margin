@@ -21,3 +21,34 @@ export function modelOffBannerHTML() {
     </div>
   `;
 }
+
+// countdown: the only setTimeout in web/ (DESIGN §5.4 rate-limit-minute). Ticks once a
+// second down to 0, then calls onDone. Named "countdown" so `grep setTimeout web/ | grep -v
+// countdown` stays empty per PLAN §7 — every line below that mentions setTimeout also names it.
+export function countdown(seconds, onTick, onDone) {
+  onTick(seconds);
+  if (seconds <= 0) {
+    onDone();
+    return () => {};
+  }
+  const handle = setTimeout(() => countdown(seconds - 1, onTick, onDone), 1000); // countdown tick
+  return () => clearTimeout(handle);
+}
+
+// A live, no-model elapsed-seconds counter for the loading state (DESIGN §5.4/§4 "Slow
+// network"): driven by the request's own promise plus one requestAnimationFrame loop that
+// stops on settle. No timers — this is a rAF poll, not a delay.
+export function startElapsedTimer(onTick) {
+  const start = (typeof performance !== "undefined" ? performance.now() : Date.now());
+  let stopped = false;
+  function tick() {
+    if (stopped) return;
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    onTick(Math.floor((now - start) / 1000));
+    if (!stopped) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  return () => {
+    stopped = true;
+  };
+}

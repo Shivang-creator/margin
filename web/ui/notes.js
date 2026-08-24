@@ -325,6 +325,23 @@ export function createNotesPane({ headerEl, bodyEl, getState, setNotes, onNotesC
     bodyEl.querySelectorAll(`[data-sentence="${i}"]`).forEach((el) => el.classList.add("active"));
   }
 
+  // For a struck Ask/Quiz (model) sentence whose citation WAS found in the notes (span
+  // present) but failed on number/overlap: DESIGN §3 "absence made visible" wants that cited
+  // line to get the same dashed emphasis a student's closest line gets, but only while the
+  // sentence is hovered/focused — it was never pre-rendered as a mark because the model isn't
+  // the student. `.note-line` is the plain per-sentence wrapper every note line already has
+  // (built for "what you missed" scrolling); reuse it here as the hover target.
+  function setActiveByLineStart(start) {
+    bodyEl.querySelectorAll(".line-cited").forEach((el) => el.classList.remove("line-cited"));
+    if (start == null) return;
+    bodyEl.querySelector(`.note-line[data-line-start="${start}"]`)?.classList.add("line-cited");
+  }
+
+  function setAbsence(text) {
+    absenceText = text;
+    renderHeader();
+  }
+
   function scrollToOffset(start) {
     const target = bodyEl.querySelector(`[data-line-start="${start}"]`);
     if (target) {
@@ -344,6 +361,8 @@ export function createNotesPane({ headerEl, bodyEl, getState, setNotes, onNotesC
     render,
     applyVerdicts,
     setActiveSentence,
+    setActiveByLineStart,
+    setAbsence,
     scrollToOffset,
     clearAbsence,
     notesInfo,

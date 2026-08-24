@@ -4,6 +4,10 @@
 
 import { cacheKey } from "./cache.js";
 
+function isOffline() {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
 export async function getGeneration({ action, notes, input, state, fetchImpl, cache, now }) {
   const key = await cacheKey({
     notes,
@@ -29,6 +33,10 @@ export async function getGeneration({ action, notes, input, state, fetchImpl, ca
     return { status: "no-key" };
   }
 
+  if (isOffline()) {
+    return { status: "offline" };
+  }
+
   let res;
   try {
     res = await fetchImpl("/api/generate", {
@@ -36,7 +44,13 @@ export async function getGeneration({ action, notes, input, state, fetchImpl, ca
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action, notes, input }),
     });
-  } catch {
+  } catch (err) {
+    // A rejected fetch with TypeError is the browser's own signal for "couldn't reach the
+    // network at all" (DNS/connection failure) — DESIGN §5.4 calls that "offline", distinct
+    // from a same-origin server error, which reaches here as a resolved (non-ok) Response.
+    if (typeof TypeError !== "undefined" && err instanceof TypeError) {
+      return { status: "offline" };
+    }
     return { status: "upstream" };
   }
 
@@ -48,7 +62,7 @@ export async function getGeneration({ action, notes, input, state, fetchImpl, ca
   }
 
   if (!res.ok || !body.ok) {
-    return { status: body.code ?? "upstream", retryAfterSec: body.retryAfterSec };
+    return { status: body.code ?? "upstream", retryAfterSec: body.retryAfterSec, detail: body.detail };
   }
 
   if (cache) await cache.set(key, body);
