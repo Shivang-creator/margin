@@ -7,24 +7,78 @@
   <link rel="stylesheet" href="/web/styles.css" />
 </head>
 <body>
-  <h1>Margin</h1>
+  <div class="app">
+    <header class="header">
+      <span class="brand">Margin</span>
+      <span class="concept">Every sentence cites your notes, or gets struck out.</span>
+      <button type="button" class="switch" id="model-switch" role="switch" aria-checked="true">
+        <span class="switch-label">Model</span>
+        <span class="switch-track" aria-hidden="true"></span>
+        <span class="switch-word" id="model-switch-word">on</span>
+      </button>
+    </header>
 
-  <section id="explain-back">
-    <h2>Explain back</h2>
-  </section>
+    <div class="segmented" role="tablist" aria-label="Section" id="segmented-tabs">
+      <button type="button" role="tab" id="seg-tab-notes" aria-controls="col-notes" aria-selected="true" data-target="notes">Notes</button>
+      <button type="button" role="tab" id="seg-tab-explain" aria-controls="panel-explain" aria-selected="false" data-target="explain">Explain</button>
+      <button type="button" role="tab" id="seg-tab-ask" aria-controls="panel-ask" aria-selected="false" data-target="ask">Ask</button>
+      <button type="button" role="tab" id="seg-tab-quiz" aria-controls="panel-quiz" aria-selected="false" data-target="quiz">Quiz</button>
+    </div>
 
-  <section id="ask">
-    <h2>Ask</h2>
-  </section>
+    <div class="layout">
+      <div class="col col-notes" id="col-notes">
+        <div class="notes-header" id="notes-header">
+          <!-- rendered by ui/notes.js -->
+        </div>
+        <div class="notes-body" id="notes-body">
+          <!-- rendered by ui/notes.js -->
+        </div>
+      </div>
 
-  <section id="quiz">
-    <h2>Quiz</h2>
-  </section>
+      <div class="col col-work">
+        <a href="#" class="back-pill" id="back-pill">&larr; back to Explain</a>
 
-  <footer id="footer">
-    <span>Ledger v1.0</span>
-    <span id="health-status">checking…</span>
-  </footer>
+        <div class="tally" id="tally" aria-live="polite" aria-atomic="true">
+          <!-- rendered by ui/tally.js -->
+        </div>
+
+        <div id="model-off-banner"></div>
+
+        <div class="tabs" role="tablist" aria-label="Working surface">
+          <button type="button" role="tab" id="tab-explain" aria-controls="panel-explain" aria-selected="true">Explain-back</button>
+          <button type="button" role="tab" id="tab-ask" aria-controls="panel-ask" aria-selected="false">Ask</button>
+          <button type="button" role="tab" id="tab-quiz" aria-controls="panel-quiz" aria-selected="false">Quiz</button>
+        </div>
+
+        <section class="tabpanel" id="panel-explain" role="tabpanel" aria-labelledby="tab-explain">
+          <!-- rendered by ui/explain.js -->
+        </section>
+
+        <section class="tabpanel" id="panel-ask" role="tabpanel" aria-labelledby="tab-ask" hidden>
+          <!-- placeholder, rendered by main.js — model wiring lands in T-13 -->
+        </section>
+
+        <section class="tabpanel" id="panel-quiz" role="tabpanel" aria-labelledby="tab-quiz" hidden>
+          <!-- placeholder, rendered by main.js — model wiring lands in T-13 -->
+        </section>
+      </div>
+    </div>
+
+    <footer class="footer" id="footer">
+      <div class="footer-line1" id="footer-line1">
+        <span id="footer-model">Model: checking&hellip;</span>
+        <span class="sep">&middot;</span>
+        <span>Ledger v1.0</span>
+        <span class="sep">&middot;</span>
+        <span id="footer-tests">&hellip;</span>
+        <span class="sep">&middot;</span>
+        <a href="https://github.com/Shivang-creator/margin" id="footer-source">Source</a>
+      </div>
+      <div class="footer-line2" id="footer-line2">
+        <!-- tag legend chips, rendered by main.js -->
+      </div>
+    </footer>
+  </div>
 
   <script type="module" src="/web/main.js"></script>
 </body>

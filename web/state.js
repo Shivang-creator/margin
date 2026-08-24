@@ -13,6 +13,8 @@ export function createInitialState() {
     notes: "",
     notesSource: "sample",
     modelOff: false,
+    reveal: false,
+    activeTab: "explain",
     tally: { written: 0, grounded: 0, struck: 0, bySurface: {} },
     sessions: [],
     lastGeneration: { ask: {}, quiz: {} },
@@ -49,6 +51,14 @@ export function setNotes(state, notes, notesSource) {
 
 export function setModelOff(state, modelOff) {
   return { ...state, modelOff };
+}
+
+export function setReveal(state, reveal) {
+  return { ...state, reveal };
+}
+
+export function setActiveTab(state, activeTab) {
+  return { ...state, activeTab };
 }
 
 export function setTally(state, tally) {
