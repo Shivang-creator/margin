@@ -1,14 +1,17 @@
-// One live Gemini call, saved verbatim as a fixture. Usage:
-//   node tools/record-generation.js <action:ask|quiz> <input> <out.json>
-// <input> is the question text for "ask" (ignored, pass "" for "quiz"). Notes are always the full
-// text of fixtures/sample-notes.md — that's the corpus every fixture is recorded against (T-09).
+// One live model call, saved verbatim as a fixture. Usage:
+//   node tools/record-generation.js <action:ask|quiz> <input> <out.json> [provider]
+// <input> is the question text for "ask" (ignored, pass "" for "quiz"). [provider] defaults to
+// "gemini"; T-14 added "featherless" — both resolve their key/model from .env.local using the
+// same `${PROVIDER}_API_KEY` / `${PROVIDER}_MODEL` convention api/generate.js uses, so this tool
+// never hardcodes a provider's config, only its name. Notes are always the full text of
+// fixtures/sample-notes.md — that's the corpus every fixture is recorded against (T-09).
 // Never fabricates: on any failure this prints the error and writes nothing.
 // Never logs the key.
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { generate as geminiGenerate } from "../api/providers/gemini.js";
+import { getProvider } from "../api/providers/index.js";
 import { PROMPT_VERSION } from "../api/prompts.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -32,10 +35,11 @@ function loadEnvFile(filePath) {
 }
 
 async function main() {
-  const [, , action, input, outPath] = process.argv;
+  const [, , action, input, outPath, providerArg] = process.argv;
+  const providerName = providerArg || "gemini";
 
   if (action !== "ask" && action !== "quiz") {
-    console.error('usage: node tools/record-generation.js <ask|quiz> <input> <out.json>');
+    console.error('usage: node tools/record-generation.js <ask|quiz> <input> <out.json> [provider]');
     process.exitCode = 1;
     return;
   }
@@ -45,27 +49,35 @@ async function main() {
     return;
   }
 
+  const provider = getProvider(providerName);
+  if (!provider) {
+    console.error(`unknown provider: ${providerName} — nothing recorded`);
+    process.exitCode = 1;
+    return;
+  }
+
   loadEnvFile(path.join(ROOT, ".env.local"));
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL;
+  const envPrefix = providerName.toUpperCase();
+  const apiKey = process.env[`${envPrefix}_API_KEY`];
+  const model = process.env[`${envPrefix}_MODEL`] || provider.DEFAULT_MODEL;
   if (!apiKey) {
-    console.error("GEMINI_API_KEY not set in .env.local — nothing recorded");
+    console.error(`${envPrefix}_API_KEY not set in .env.local — nothing recorded`);
     process.exitCode = 1;
     return;
   }
   if (!model) {
-    console.error("GEMINI_MODEL not set in .env.local — nothing recorded");
+    console.error(`${envPrefix}_MODEL not set in .env.local and provider has no default — nothing recorded`);
     process.exitCode = 1;
     return;
   }
 
   const notes = fs.readFileSync(path.join(ROOT, "fixtures", "sample-notes.md"), "utf8");
 
-  console.log(JSON.stringify({ recording: { action, model } }));
+  console.log(JSON.stringify({ recording: { provider: providerName, action, model } }));
 
   const started = Date.now();
-  const result = await geminiGenerate({
+  const result = await provider.generate({
     action,
     notes,
     input: action === "ask" ? input : undefined,
@@ -76,7 +88,7 @@ async function main() {
   });
   const latencyMs = result.latencyMs ?? Date.now() - started;
 
-  console.log(JSON.stringify({ provider: "gemini", model, status: result.ok ? "ok" : result.code, latencyMs }));
+  console.log(JSON.stringify({ provider: providerName, model, status: result.ok ? "ok" : result.code, latencyMs }));
 
   if (!result.ok) {
     console.error(`live call failed: ${result.code}${result.detail ? " — " + result.detail : ""} — nothing recorded`);
@@ -87,7 +99,7 @@ async function main() {
   const envelope = {
     ok: true,
     action,
-    provider: "gemini",
+    provider: providerName,
     model,
     promptVersion: PROMPT_VERSION,
     latencyMs,
@@ -98,8 +110,9 @@ async function main() {
 
   const absOut = path.resolve(ROOT, outPath);
   fs.mkdirSync(path.dirname(absOut), { recursive: true });
-  // Compact, no pretty-print spacing: keeps `"provider":"gemini"` etc. grep-able as an exact
-  // substring (T-09 accept check), and this file is read by tooling, not humans.
+  // Compact, no pretty-print spacing: keeps `"provider":"gemini"` / `"provider":"featherless"`
+  // grep-able as an exact substring (T-09/T-14 accept checks), and this file is read by tooling,
+  // not humans.
   fs.writeFileSync(absOut, JSON.stringify(envelope) + "\n");
   console.log(`wrote ${path.relative(ROOT, absOut)}`);
 }

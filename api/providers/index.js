@@ -1,11 +1,13 @@
 // Provider registry, built from PROVIDER_ORDER (env). One `import` + one map entry per provider —
-// T-14 adds featherless with exactly that: `import * as featherless from "./featherless.js";` plus
-// one line in REGISTRY below. api/generate.js never imports a provider module directly.
+// T-14 added featherless with exactly that: one import, one REGISTRY line, zero changes anywhere
+// else in api/. api/generate.js never imports a provider module directly.
 
 import * as gemini from "./gemini.js";
+import * as featherless from "./featherless.js";
 
 const REGISTRY = {
   gemini,
+  featherless,
 };
 
 // getProviderOrder(env) -> string[] — parses PROVIDER_ORDER (default "gemini"), trims, drops empties.

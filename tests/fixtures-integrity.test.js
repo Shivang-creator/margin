@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 
-const RECORDED_FIXTURES = ["ask-1.json", "ask-2.json", "quiz-1.json"];
+const RECORDED_FIXTURES = ["ask-1.json", "ask-2.json", "quiz-1.json", "ask-featherless.json"];
 
 test("test_recorded_fixtures_carry_provider_model_and_a_recorded_date", () => {
   for (const name of RECORDED_FIXTURES) {
@@ -24,6 +24,13 @@ test("test_recorded_fixtures_carry_provider_model_and_a_recorded_date", () => {
     assert.equal(typeof data.recordedAt, "string", `${name}: recordedAt missing`);
     assert.ok(!Number.isNaN(Date.parse(data.recordedAt)), `${name}: recordedAt is not a valid date`);
   }
+});
+
+test("test_featherless_fixture_is_tagged_with_its_own_provider_and_model", () => {
+  const abs = path.join(ROOT, "fixtures", "generations", "ask-featherless.json");
+  const data = JSON.parse(fs.readFileSync(abs, "utf8"));
+  assert.equal(data.provider, "featherless");
+  assert.match(data.model, /qwen/i);
 });
 
 test("test_sample_notes_carries_source_and_licence_header", () => {
