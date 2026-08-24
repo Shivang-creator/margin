@@ -182,11 +182,16 @@ export function createAskSurface({
 
     if (phase === "loading") {
       region.className = "result-region";
-      const modelName = getHealthModel() ?? "the model";
+      // J-04: this used to name the primary model (from /api/health) while the request was
+      // still in flight — but the server can silently fall back to a different model on a
+      // daily-quota 429, and the loading label named the wrong one for the whole request
+      // (a judge would momentarily believe Gemini answered when it was actually Featherless).
+      // The only model name we can trust is the one the *response* names, so the loading
+      // state never guesses.
       region.innerHTML =
         stateCardHTML({
           variant: "info",
-          title: `Asking ${escapeHTML(modelName)} &middot; <span id="ask-elapsed">${elapsedSec}</span> s`,
+          title: `Asking&hellip; &middot; <span id="ask-elapsed">${elapsedSec}</span> s`,
           body: "Answers take 2–10 s. The server gives up at 20 s and says so.",
         }) + previousResultHTML();
       return;
