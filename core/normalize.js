@@ -32,16 +32,30 @@ export function normalize(text) {
     step[i] = lowered.length === 1 ? lowered : c;
   }
 
-  // Step 3: keep letters, digits, and an apostrophe between two letters; else space.
+  // Step 3: keep letters, digits, an apostrophe between two letters, and a comma/period
+  // between two digits (thousands separator / decimal point — PLAN §4.2's decimal branch
+  // was dead code because this step used to space out `,`/`.` before numberTokens ever saw
+  // them; R-03). Lookups read a pre-mutation snapshot so deciding char i never depends on
+  // whether char i-1 was already turned into a space earlier in this same pass.
+  const before3 = step.slice();
   for (let i = 0; i < len; i++) {
-    const c = step[i];
+    const c = before3[i];
     if (isLetter(c) || isDigit(c)) continue;
     if (
       c === "'" &&
       i > 0 &&
       i < len - 1 &&
-      isLetter(step[i - 1]) &&
-      isLetter(step[i + 1])
+      isLetter(before3[i - 1]) &&
+      isLetter(before3[i + 1])
+    ) {
+      continue;
+    }
+    if (
+      (c === "," || c === ".") &&
+      i > 0 &&
+      i < len - 1 &&
+      isDigit(before3[i - 1]) &&
+      isDigit(before3[i + 1])
     ) {
       continue;
     }
