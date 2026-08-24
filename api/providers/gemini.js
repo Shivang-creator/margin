@@ -66,7 +66,11 @@ export async function generate({ action, notes, input, model, apiKey, fetchImpl,
     if (err && err.name === "AbortError") {
       return { ok: false, code: "timeout", latencyMs };
     }
-    return { ok: false, code: "upstream", detail: String(err && err.message ? err.message : err).slice(0, 200), latencyMs };
+    // R-02: err.message can carry the request URL (which has ?key=... in it, e.g. undici's
+    // "fetch failed" cause chain). Log it server-side only — the client only ever gets the
+    // code, never the message text.
+    console.error(JSON.stringify({ provider: "gemini", event: "fetch-failed", message: String(err && err.message ? err.message : err).slice(0, 500) }));
+    return { ok: false, code: "upstream", latencyMs };
   } finally {
     clearTimeout(timer);
   }

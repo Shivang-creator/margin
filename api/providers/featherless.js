@@ -96,7 +96,10 @@ async function doGenerate({ action, notes, input, model, apiKey, fetchImpl, time
     if (err && err.name === "AbortError") {
       return { ok: false, code: "timeout", latencyMs };
     }
-    return { ok: false, code: "upstream", detail: String(err && err.message ? err.message : err).slice(0, 200), latencyMs };
+    // R-02: never forward err.message to the client (it's undici's own text and can carry
+    // request internals). Log it server-side only; the client gets a code, nothing else.
+    console.error(JSON.stringify({ provider: "featherless", event: "fetch-failed", message: String(err && err.message ? err.message : err).slice(0, 500) }));
+    return { ok: false, code: "upstream", latencyMs };
   } finally {
     clearTimeout(timer);
   }
