@@ -332,7 +332,14 @@ a { color: var(--gen); }
   text-decoration-line: line-through;
   text-decoration-color: transparent;
   text-decoration-thickness: 2px;
-  transition: text-decoration-color 0ms var(--strike-ms);
+  /* J-01: this used to carry `transition: text-decoration-color 0ms var(--strike-ms)`.
+     That shorthand's second time value is a *delay*, not a duration — it was meant to hold
+     the underline back until the ::after strike-in animation below had drawn its line, but
+     it also silently delayed the Reveal-struck toggle by --strike-ms (220ms) each time,
+     which is long enough that a script (or an impatient click) reading computed style right
+     after the click sees no change and looks broken. The mount-in stagger is already fully
+     handled by ::after's own `animation-delay` below; this property changes synchronously
+     now, on both mount and reveal. */
   position: relative;
 }
 .mounted .verdict-invented s { text-decoration-color: var(--struck); }
@@ -421,6 +428,12 @@ a { color: var(--gen); }
 .footer-line2 { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-2); align-items: center; }
 .footer details { margin-top: var(--s-2); }
 .footer summary { cursor: pointer; color: var(--gen); }
+.calibration-table { width: 100%; border-collapse: collapse; margin-top: var(--s-2); font-size: var(--fs-13); }
+.calibration-table th, .calibration-table td { text-align: left; padding: 2px var(--s-2) 2px 0; border-bottom: 1px solid var(--line); }
+.calibration-row-spotlight td { border-left: 3px solid var(--struck); padding-left: var(--s-2); color: var(--struck); }
+.calibration-totals { margin-top: var(--s-2); font-weight: 600; }
+.calibration-margin { font-weight: 400; color: var(--ink-2); }
+.calibration-spotlight-caption { margin-top: var(--s-2); color: var(--struck); border-left: 3px solid var(--struck); padding-left: var(--s-2); }
 
 /* absence strip inside notes header */
 .absence-strip { padding: var(--s-2) var(--s-4); font-size: var(--fs-13); color: var(--ink-2); background: var(--paper); border-top: 1px solid var(--line); }

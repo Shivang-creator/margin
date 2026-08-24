@@ -19,6 +19,8 @@ import { createExplainSurface } from "./ui/explain.js";
 import { createAskSurface } from "./ui/ask.js";
 import { createQuizSurface } from "./ui/quiz.js";
 import { modelOffBannerHTML } from "./ui/status.js";
+import { runExplainBack } from "./pipeline.js";
+import { runCalibration, calibrationDetailsHTML } from "./calibration.js";
 
 let state = loadState();
 function setState(next) {
@@ -59,6 +61,7 @@ const els = {
   footerModel: document.getElementById("footer-model"),
   footerTests: document.getElementById("footer-tests"),
   footerLine2: document.getElementById("footer-line2"),
+  footerLine3: document.getElementById("footer-line3"),
 };
 
 /* ---------- model toggle (real: persisted, gates Ask/Quiz via web/model.js) ---------- */
@@ -264,7 +267,7 @@ els.segQuiz.addEventListener("click", () => selectSegment("quiz"));
 
 window.addEventListener("resize", applyVisibility);
 
-/* ---------- footer (DESIGN §5.7 line 1 + tag legend; calibration omitted — T-11 hasn't landed) ---------- */
+/* ---------- footer (DESIGN §5.7: line 1 model/tests, line 2 tag legend, line 3 calibration drawer) ---------- */
 const TAG_LEGEND = [
   { cls: "chip-notes", text: "Notes", title: "Your text, exactly as pasted. Never altered." },
   { cls: "chip-sample", text: "Sample", title: "Bundled sample notes. Source and licence in the file." },
@@ -307,6 +310,29 @@ async function bootFooter() {
     els.footerTests.textContent = `${data.pass}/${data.total} tests${date ? ` · ${date}` : ""}`;
   } catch {
     els.footerTests.textContent = "tests: unavailable";
+  }
+
+  await renderCalibrationDrawer();
+}
+
+// DESIGN §5.7 line 3: "How the Ledger is checked" — the T-11 calibration table, run live
+// (zero model, zero network past these two static fetches) against the current core/, with
+// rule 8's spotlighted false-strike row. If either fixture fails to load, the details
+// element is omitted entirely — never a placeholder (same rule DESIGN gives for "T-11 has
+// not landed", which is no longer true, but the omit-on-failure behaviour stays honest).
+async function renderCalibrationDrawer() {
+  try {
+    const [fixtureRes, notesRes] = await Promise.all([
+      fetch("/fixtures/labelled/explain-back-cases.json"),
+      fetch("/fixtures/sample-notes.md"),
+    ]);
+    if (!fixtureRes.ok || !notesRes.ok) throw new Error("calibration fixtures unavailable");
+    const fixture = await fixtureRes.json();
+    const notes = await notesRes.text();
+    const result = runCalibration({ fixture, notes, runExplainBack });
+    els.footerLine3.innerHTML = calibrationDetailsHTML(result, fixture);
+  } catch {
+    els.footerLine3.innerHTML = "";
   }
 }
 
